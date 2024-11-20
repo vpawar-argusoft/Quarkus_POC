@@ -502,4 +502,122 @@ Normal image builds involve creating a JAR, WAR, or EAR file (e.g., using tools 
 ### **Conclusion**
 Native image generation offers significant benefits for cloud-native and low-latency use cases but comes with trade-offs in compatibility and debugging. Normal JVM builds remain the best choice for applications requiring robust performance tuning, full Java API support, and simpler builds.
  
- 7. 
+1. what are jar types/ what is legacy jar?
+
+
+Let me explain the different JAR types, particularly in the context of Quarkus:
+
+### Main JAR Types
+
+1. **Fast-JAR** (Default in Quarkus)
+```properties
+# Enable in Quarkus
+quarkus.package.type=fast-jar
+```
+- Current default packaging format in Quarkus
+- Optimized for faster startup
+- Structure:
+  - `quarkus-app/lib/` - Dependencies
+  - `quarkus-app/app/` - Application classes
+  - `quarkus-app/quarkus/` - Quarkus specific files
+  - `quarkus-app/quarkus-run.jar` - Main executable
+
+2. **Legacy-JAR**
+```properties
+# Enable in Quarkus
+quarkus.package.type=legacy-jar
+```
+- Traditional single JAR format
+- All dependencies and classes in one file
+- Slower to start than fast-jar
+- Better compatibility with traditional tools
+- Used when you need a single self-contained JAR
+
+3. **Uber-JAR**
+```properties
+# Enable in Quarkus
+quarkus.package.type=uber-jar
+```
+- Similar to legacy-jar but includes more runtime dependencies
+- Completely self-contained
+- Largest file size
+- Used when you need complete independence from external dependencies
+
+4. **Native**
+```properties
+# Enable in Quarkus
+quarkus.package.type=native
+```
+- Compiled to native code using GraalVM
+- Fastest startup time
+- Smallest memory footprint
+- Longer build time
+- Platform-specific
+
+### Key Differences
+
+```plaintext
+┌────────────────┬──────────────┬────────────┬───────────────┬────────────────┐
+│ Feature        │ Fast-JAR     │ Legacy-JAR │ Uber-JAR      │ Native         │
+├────────────────┼──────────────┼────────────┼───────────────┼────────────────┤
+│ Startup Time   │ Fast         │ Medium     │ Medium        │ Very Fast      │
+│ Build Time     │ Fast         │ Fast       │ Medium        │ Slow           │
+│ File Size      │ Medium       │ Medium     │ Large         │ Small          │
+│ Dependencies   │ External     │ Bundled    │ All Bundled   │ Compiled In    │
+│ Compatibility  │ Good         │ Excellent  │ Excellent     │ Platform Spec. │
+└────────────────┴──────────────┴────────────┴───────────────┴────────────────┘
+```
+
+### When to Use Each Type
+
+1. **Fast-JAR**
+   - Default choice for most applications
+   - When deploying to containers
+   - When startup time is important
+
+2. **Legacy-JAR**
+   - When using traditional Java tools
+   - When you need better compatibility
+   - When using older deployment systems
+
+3. **Uber-JAR**
+   - When you need complete portability
+   - When deploying to environments without dependency management
+   - When you want to avoid classpath issues
+
+4. **Native**
+   - When minimal startup time is crucial
+   - For serverless deployments
+   - When memory footprint is critical
+
+### Example Configuration in `application.properties`
+
+```properties
+# For Legacy JAR
+quarkus.package.type=legacy-jar
+
+# For Uber JAR
+quarkus.package.type=uber-jar
+
+# For Native
+quarkus.package.type=native
+quarkus.native.container-build=true  # For container-based native builds
+```
+
+### Building Different Types with Gradle
+
+```bash
+# Fast-JAR (default)
+./gradlew build
+
+# Legacy-JAR
+./gradlew build -Dquarkus.package.type=legacy-jar
+
+# Uber-JAR
+./gradlew build -Dquarkus.package.type=uber-jar
+
+# Native
+./gradlew build -Dquarkus.package.type=native
+```
+
+8. 
