@@ -406,4 +406,82 @@ networks:
 - **Docker Compose** extends Docker's capabilities to orchestrate and manage multi-container applications in a declarative and reproducible way, making it a powerful tool for complex setups.
 
 
-3. 
+3. make configs to run quarkus app connected with postgress both in docker
+
+To modify your Dockerfile for the Quarkus application so that it can connect to the PostgreSQL database running in a separate Docker container, you need to ensure a few things:
+
+1. **Network Configuration**: Both the Quarkus application and PostgreSQL should be on the same Docker network.
+2. **Database Connection Configuration**: Update the `application.properties` file in your Quarkus application to point to the PostgreSQL container.
+
+### Step 1: Modify the Dockerfile (if needed)
+
+Your existing Dockerfile for the Quarkus application may not need significant changes, but ensure it includes the necessary dependencies for PostgreSQL. Here’s a simplified version of what your Dockerfile might look like:
+
+```dockerfile
+# growth-mindset/src/main/docker/Dockerfile.jvm
+FROM registry.access.redhat.com/ubi8/openjdk-17:1.20
+
+ENV LANGUAGE='en_US:en'
+
+# Copy application files
+COPY --chown=185 build/quarkus-app/lib/ /deployments/lib/
+COPY --chown=185 build/quarkus-app/*.jar /deployments/
+COPY --chown=185 build/quarkus-app/app/ /deployments/app/
+COPY --chown=185 build/quarkus-app/quarkus/ /deployments/quarkus/
+
+EXPOSE 8080
+USER 185
+ENV JAVA_OPTS_APPEND="-Dquarkus.http.host=0.0.0.0 -Djava.util.logging.manager=org.jboss.logmanager.LogManager"
+ENV JAVA_APP_JAR="/deployments/quarkus-run.jar"
+
+ENTRYPOINT [ "/opt/jboss/container/java/run/run-java.sh" ]
+```
+
+### Step 2: Update `application.properties`
+
+Make sure your `application.properties` file in the Quarkus application is configured to connect to the PostgreSQL container. Here’s how you can set it up:
+
+```properties
+# src/main/resources/application.properties
+quarkus.datasource.db-kind=postgresql
+quarkus.datasource.username=postgres
+quarkus.datasource.password=mysecretpassword
+quarkus.datasource.jdbc.url=jdbc:postgresql://my-postgres:5432/postgres
+quarkus.hibernate-orm.database.generation=update
+```
+
+### Explanation of Changes
+- **Database URL**: The `jdbc:postgresql://my-postgres:5432/postgres` URL specifies the hostname as `my-postgres`, which is the name of the PostgreSQL container. This allows the Quarkus application to connect to the PostgreSQL database running in the Docker container.
+
+### Step 3: Create a Docker Network (if needed)
+
+If you haven't already, create a Docker network to allow communication between the containers:
+
+```bash
+docker network create my-network
+```
+
+### Step 4: Run PostgreSQL Container on the Network
+
+Run the PostgreSQL container on the created network:
+
+```bash
+docker run --name my-postgres --network my-network -e POSTGRES_PASSWORD=mysecretpassword -d -p 5432:5432 postgres
+```
+
+### Step 5: Build and Run the Quarkus Application Container
+
+Now, build your Quarkus application Docker image and run it on the same network:
+
+```bash
+# Build the Docker image for your Quarkus application
+docker build -f src/main/docker/Dockerfile.jvm -t quarkus/growth-mindset-jvm .
+
+# Run the Quarkus application container on the same network
+docker run --name my-quarkus-app --network my-network -p 8080:8080 quarkus/growth-mindset-jvm
+```
+
+### Summary
+
+By following these steps, your Quarkus application should be able to connect to the PostgreSQL database running in a separate Docker container. Ensure that both containers are on the same Docker network for successful communication.
+4. 
